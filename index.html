@@ -254,7 +254,7 @@
             // 设置默认日期范围（最近30天）
             const today = new Date();
             const startDate = new Date(today);
-            startDate.setDate(today.getDate() - 30);
+            startDate.setDate(today.getDate() - 3000);
             
             document.getElementById('startDate').valueAsDate = startDate;
             document.getElementById('endDate').valueAsDate = today;

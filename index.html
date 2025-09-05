@@ -1,630 +1,642 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Last.fm 音乐记录可视化</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #f5f5f5;
-            color: #333;
-        }
-        .container {
-            background-color: white;
-            border-radius: 10px;
-            padding: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        h1 {
-            text-align: center;
-            color: #1db954;
-            margin-bottom: 30px;
-        }
-        .controls {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 20px;
-            margin-bottom: 30px;
-            padding: 20px;
-            background-color: #f8f9fa;
-            border-radius: 8px;
-        }
-        .control-group {
-            flex: 1;
-            min-width: 200px;
-        }
-        label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-        }
-        input, select {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            box-sizing: border-box;
-        }
-        button {
-            background-color: #1db954;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: bold;
-            transition: background-color 0.3s;
-        }
-        button:hover {
-            background-color: #1ed760;
-        }
-        .charts {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-        .chart-container {
-            background-color: white;
-            border-radius: 8px;
-            padding: 15px;
-            box-shadow: 0 1px 5px rgba(0,0,0,0.1);
-        }
-        .chart-title {
-            text-align: center;
-            margin-bottom: 15px;
-            font-weight: bold;
-        }
-        .tables {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
-        }
-        th, td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
-        }
-        th {
-            background-color: #f2f2f2;
-            font-weight: bold;
-        }
-        tr:nth-child(even) {
-            background-color: #f9f9f9;
-        }
-        .random-selection {
-            margin-top: 30px;
-            padding: 20px;
-            background-color: #f8f9fa;
-            border-radius: 8px;
-        }
-        .random-controls {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-        .random-controls select {
-            width: auto;
-        }
-        .random-results {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-            gap: 15px;
-        }
-        .random-item {
-            background-color: white;
-            padding: 15px;
-            border-radius: 8px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }
-        .random-item h4 {
-            margin-top: 0;
-            color: #1db954;
-        }
-        .loading {
-            text-align: center;
-            padding: 20px;
-            font-style: italic;
-            color: #666;
-        }
-        @media (max-width: 768px) {
-            .charts, .tables {
-                grid-template-columns: 1fr;
-            }
-            .controls {
-                flex-direction: column;
-            }
-        }
-    </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title> Evenson Last.fm 听歌数据可视化</title>
+<style>
+  :root{
+    --bg:#ffffff;--fg:#111827;--muted:#6b7280;--panel:#f8fafc;--border:#e5e7eb;
+    --primary:#2563eb;--accent:#059669;--bar:#4f46e5;--bar2:#059669;--chip:#eef2ff;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#0b0f14;--fg:#e5e7eb;--muted:#9ca3af;--panel:#10161d;--border:#1f2937;
+      --primary:#3b82f6;--accent:#10b981;--bar:#6366f1;--bar2:#22c55e;--chip:#1f2937;
+    }
+    table tbody tr:hover{background:#0f172a;}
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"PingFang SC","Noto Sans CJK SC","Microsoft YaHei",sans-serif;}
+  header{position:sticky;top:0;z-index:5;background:var(--panel);border-bottom:1px solid var(--border);padding:14px 18px;}
+  header h1{margin:0;font-size:18px}
+  header .sub{color:var(--muted);font-size:12px;margin-top:4px}
+  .container{max-width:1200px;margin:0 auto;padding:16px 18px;}
+  .controls{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;margin:8px 0 16px}
+  .field{display:flex;flex-direction:column;gap:6px}
+  .field label{font-size:12px;color:var(--muted)}
+  input[type="date"],select{padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:#fff;color:#111827;min-width:160px}
+  @media (prefers-color-scheme: dark){
+    input[type="date"],select{background:#0b1220;color:var(--fg)}
+  }
+  button{padding:9px 12px;border:1px solid var(--border);border-radius:8px;background:var(--primary);color:#fff;cursor:pointer}
+  button.secondary{background:transparent;color:var(--fg)}
+  button:disabled{opacity:0.6;cursor:not-allowed}
+  .chips{display:flex;gap:6px;flex-wrap:wrap}
+  .chip{font-size:12px;background:var(--chip);border:1px solid var(--border);padding:4px 8px;border-radius:999px;color:var(--muted)}
+  .grid{display:grid;grid-template-columns:1.2fr 1fr;gap:16px}
+  @media (max-width: 980px){ .grid{grid-template-columns:1fr} }
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:12px}
+  .card h3{margin:0 0 8px;font-size:16px}
+  .summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+  @media (max-width: 980px){ .summary{grid-template-columns:repeat(2,1fr)} }
+  .summary .item{background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px}
+  @media (prefers-color-scheme: dark){ .summary .item{background:#0b1220} }
+  .summary .k{font-size:12px;color:var(--muted)}
+  .summary .v{font-weight:700;font-size:18px;margin-top:2px}
+  .charts{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media (max-width: 980px){ .charts{grid-template-columns:1fr} }
+  .bars{height:170px;display:flex;align-items:flex-end;gap:6px;border-bottom:1px solid var(--border);padding:8px 4px 0}
+  .bar{flex:1;background:linear-gradient(to top,var(--bar),var(--bar));border-radius:4px 4px 0 0;position:relative;min-width:8px}
+  .bar.alt{background:linear-gradient(to top,var(--bar2),var(--bar2))}
+  .bar:hover::after{
+    content:attr(data-label);
+    position:absolute;bottom:100%;left:50%;transform:translateX(-50%);
+    background:rgba(0,0,0,.75);color:#fff;padding:3px 6px;font-size:12px;border-radius:4px;white-space:nowrap
+  }
+  .bar-labels{display:grid;grid-template-columns:repeat(var(--cols,7),1fr);gap:6px;margin-top:6px;font-size:12px;color:var(--muted);text-align:center}
+  table{width:100%;border-collapse:collapse}
+  thead th{position:sticky;top:0;background:var(--panel)}
+  th,td{padding:10px 8px;border-bottom:1px solid var(--border);font-size:14px;text-align:left}
+  tbody tr:hover{background:rgba(0,0,0,0.03)}
+  .pager{display:flex;gap:10px;align-items:center;justify-content:flex-end;padding-top:8px}
+  .muted{color:var(--muted)}
+  .status{font-size:13px;color:var(--muted);display:flex;gap:8px;align-items:center}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);display:inline-block}
+  .loading{display:inline-block;width:12px;height:12px;border:2px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin 1s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .wrap{overflow:auto}
+</style>
 </head>
 <body>
-    <div class="container">
-        <h1>Last.fm 音乐记录可视化</h1>
-        
-        <div class="controls">
-            <div class="control-group">
-                <label for="startDate">开始日期:</label>
-                <input type="date" id="startDate">
-            </div>
-            <div class="control-group">
-                <label for="endDate">结束日期:</label>
-                <input type="date" id="endDate">
-            </div>
-            <div class="control-group">
-                <label>&nbsp;</label>
-                <button id="updateBtn">更新数据</button>
-            </div>
-        </div>
-        
-        <div id="loading" class="loading">正在加载数据...</div>
-        
-        <div id="content" style="display: none;">
-            <div class="charts">
-                <div class="chart-container">
-                    <div class="chart-title">听歌时间星期分布</div>
-                    <canvas id="weekdayChart"></canvas>
-                </div>
-                <div class="chart-container">
-                    <div class="chart-title">听歌时间24小时分布</div>
-                    <canvas id="hourChart"></canvas>
-                </div>
-            </div>
-            
-            <div class="tables">
-                <div>
-                    <h3>歌曲排行榜 (按播放次数)</h3>
-                    <table id="songsTable">
-                        <thead>
-                            <tr>
-                                <th>排名</th>
-                                <th>歌曲</th>
-                                <th>艺人</th>
-                                <th>播放次数</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
-                <div>
-                    <h3>艺人排行榜 (按播放次数)</h3>
-                    <table id="artistsTable">
-                        <thead>
-                            <tr>
-                                <th>排名</th>
-                                <th>艺人</th>
-                                <th>播放次数</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
-                <div>
-                    <h3>专辑排行榜 (按播放次数)</h3>
-                    <table id="albumsTable">
-                        <thead>
-                            <tr>
-                                <th>排名</th>
-                                <th>专辑</th>
-                                <th>艺人</th>
-                                <th>播放次数</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
-            </div>
-            
-            <div class="random-selection">
-                <h3>随机选择歌曲</h3>
-                <div class="random-controls">
-                    <label for="randomCount">选择数量:</label>
-                    <select id="randomCount">
-                        <option value="1">1首</option>
-                        <option value="5" selected>5首</option>
-                        <option value="10">10首</option>
-                    </select>
-                    <button id="randomBtn">随机选择</button>
-                </div>
-                <div class="random-results" id="randomResults"></div>
-            </div>
-        </div>
+<header>
+  <h1> evenson Last.fm 听歌数据可视化</h1>
+  <div class="sub">支持时间筛选、分布图、排行榜与随机选歌</div>
+</header>
+
+<div class="container">
+  <div class="controls">
+    <div class="field">
+      <label for="startDate">开始日期</label>
+      <input type="date" id="startDate">
+    </div>
+    <div class="field">
+      <label for="endDate">结束日期</label>
+      <input type="date" id="endDate">
+    </div>
+    <div class="field">
+      <label for="rankType">排行榜</label>
+      <select id="rankType">
+        <option value="track">歌曲</option>
+        <option value="artist">艺人</option>
+        <option value="album">专辑</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="pageSize">每页条数</label>
+      <select id="pageSize">
+        <option>10</option>
+        <option selected>25</option>
+        <option>50</option>
+        <option>100</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="randCount">随机选取</label>
+      <div style="display:flex;gap:8px;align-items:center">
+        <select id="randCount" style="min-width:90px">
+          <option value="1">1 首</option>
+          <option value="5" selected>5 首</option>
+          <option value="10">10 首</option>
+        </select>
+        <button id="randBtn" class="secondary">随机选歌</button>
+      </div>
+    </div>
+    <div style="margin-left:auto" class="status">
+      <span id="loading" class="loading"></span>
+      <span id="statusText">正在加载数据…</span>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h3>数据摘要</h3>
+      <div class="summary" id="summary">
+        <div class="item"><div class="k">播放次数</div><div class="v" id="sumCount">-</div></div>
+        <div class="item"><div class="k">不同歌曲数</div><div class="v" id="sumTracks">-</div></div>
+        <div class="item"><div class="k">不同艺人数</div><div class="v" id="sumArtists">-</div></div>
+        <div class="item"><div class="k">不同专辑数</div><div class="v" id="sumAlbums">-</div></div>
+      </div>
+      <div class="muted" id="rangeInfo" style="margin-top:8px">-</div>
     </div>
 
-    <script>
-        // 全局变量
-        let allData = [];
-        let filteredData = [];
-        let weekdayChart = null;
-        let hourChart = null;
-        
-        // 页面加载完成后初始化
-        document.addEventListener('DOMContentLoaded', function() {
-            // 设置默认日期范围（最近30天）
-            const today = new Date();
-            const startDate = new Date(today);
-            startDate.setDate(today.getDate() - 3000);
-            
-            document.getElementById('startDate').valueAsDate = startDate;
-            document.getElementById('endDate').valueAsDate = today;
-            
-            // 加载数据
-            loadData();
-            
-            // 绑定事件
-            document.getElementById('updateBtn').addEventListener('click', updateData);
-            document.getElementById('randomBtn').addEventListener('click', selectRandomSongs);
-        });
-        
-        // 从网络加载CSV数据
-        async function loadData() {
-            try {
-                const response = await fetch('https://raw.githubusercontent.com/EvensonCalder/auto-song/main/proevenson.csv');
-                const csvText = await response.text();
-                parseCSV(csvText);
-            } catch (error) {
-                console.error('加载数据失败:', error);
-                document.getElementById('loading').textContent = '加载数据失败，请检查网络连接';
-            }
+    <div class="card">
+      <h3>随机选取结果</h3>
+      <div id="randomList" class="wrap" style="max-height:180px;overflow:auto">
+        <ul id="randomUl" style="margin:6px 0 0 18px; padding:0"></ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:14px">
+    <h3>时间分布</h3>
+    <div class="charts">
+      <div>
+        <div class="muted" style="margin-bottom:4px">按星期</div>
+        <div class="bars" id="weekBars"></div>
+        <div class="bar-labels" id="weekLabels" style="--cols:7"></div>
+      </div>
+      <div>
+        <div class="muted" style="margin-bottom:4px">按小时</div>
+        <div class="bars" id="hourBars"></div>
+        <div class="bar-labels" id="hourLabels" style="--cols:24"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:14px">
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <h3 id="rankTitle">排行榜 · 歌曲</h3>
+      <div class="muted" id="rankInfo">-</div>
+    </div>
+    <div class="wrap" style="max-height:420px;overflow:auto;margin-top:6px">
+      <table id="rankTable">
+        <thead>
+          <tr id="rankHead"></tr>
+        </thead>
+        <tbody id="rankBody"></tbody>
+      </table>
+    </div>
+    <div class="pager">
+      <button id="prevPage" class="secondary">上一页</button>
+      <span class="muted">第 <span id="pageNum">1</span> / <span id="pageTotal">1</span> 页</span>
+      <button id="nextPage" class="secondary">下一页</button>
+    </div>
+  </div>
+
+  <div style="margin-top:10px" class="status">
+    <span class="dot"></span>
+    <span id="sourceInfo">数据源：-</span>
+  </div>
+</div>
+
+<script>
+(()=>{
+  // ---------- Config ----------
+  const SOURCES = [
+    "https://raw.githubusercontent.com/EvensonCalder/auto-song/main/proevenson.csv",
+    "https://cdn.jsdelivr.net/gh/EvensonCalder/auto-song@main/proevenson.csv",
+    "https://gcore.jsdelivr.net/gh/EvensonCalder/auto-song@main/proevenson.csv"
+  ];
+  const WEEK_NAMES = ["周日","周一","周二","周三","周四","周五","周六"]; // JS getDay(): 0=周日
+  const MONTHS = {Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Sept:8,Oct:9,Nov:10,Dec:11};
+
+  // ---------- State ----------
+  const state = {
+    records: [],      // {a, b, t, ms}
+    minMs: null, maxMs: null,
+    viewStartMs: null, viewEndMs: null,
+    filteredSlice: [0,0], // startIdx, endIdx (exclusive)
+    rankType: 'track',
+    pageSize: 25,
+    page: 1,
+    sourceUsed: null
+  };
+
+  // ---------- DOM ----------
+  const el = {
+    startDate: document.getElementById('startDate'),
+    endDate: document.getElementById('endDate'),
+    rankType: document.getElementById('rankType'),
+    pageSize: document.getElementById('pageSize'),
+    randCount: document.getElementById('randCount'),
+    randBtn: document.getElementById('randBtn'),
+    randomUl: document.getElementById('randomUl'),
+    loading: document.getElementById('loading'),
+    statusText: document.getElementById('statusText'),
+    sourceInfo: document.getElementById('sourceInfo'),
+    rangeInfo: document.getElementById('rangeInfo'),
+    sumCount: document.getElementById('sumCount'),
+    sumTracks: document.getElementById('sumTracks'),
+    sumArtists: document.getElementById('sumArtists'),
+    sumAlbums: document.getElementById('sumAlbums'),
+    weekBars: document.getElementById('weekBars'),
+    weekLabels: document.getElementById('weekLabels'),
+    hourBars: document.getElementById('hourBars'),
+    hourLabels: document.getElementById('hourLabels'),
+    rankTitle: document.getElementById('rankTitle'),
+    rankInfo: document.getElementById('rankInfo'),
+    rankHead: document.getElementById('rankHead'),
+    rankBody: document.getElementById('rankBody'),
+    prevPage: document.getElementById('prevPage'),
+    nextPage: document.getElementById('nextPage'),
+    pageNum: document.getElementById('pageNum'),
+    pageTotal: document.getElementById('pageTotal'),
+  };
+
+  // ---------- Utils ----------
+  function formatDateInput(d){
+    const y = d.getFullYear();
+    const m = String(d.getMonth()+1).padStart(2,'0');
+    const day = String(d.getDate()).padStart(2,'0');
+    return `${y}-${m}-${day}`;
+  }
+  function parseDateInput(s){ // yyyy-mm-dd -> local start of day
+    const [y,m,d] = s.split('-').map(Number);
+    return new Date(y, m-1, d, 0, 0, 0, 0).getTime();
+  }
+  function endOfDayMs(ms){
+    const d = new Date(ms);
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23,59,59,999).getTime();
+  }
+  function fmtNum(n){ return n.toLocaleString(); }
+  function clamp(v, lo, hi){ return Math.min(Math.max(v, lo), hi); }
+  function byCountDesc(a, b){ return b.count - a.count; }
+
+  // Robust Last.fm time parser: "05 Sep 2025 14:19"
+  function parseLastfmTime(s){
+    if(!s) return NaN;
+    s = s.trim();
+    const m = /^(\d{1,2})\s+([A-Za-z]{3,4})\s+(\d{4})\s+(\d{2}):(\d{2})$/.exec(s);
+    if(m){
+      const day = parseInt(m[1],10);
+      const monKey = m[2].slice(0,4); // allow "Sept"
+      const mon = MONTHS[monKey] ?? MONTHS[m[2].slice(0,3)];
+      const year = parseInt(m[3],10);
+      const hh = parseInt(m[4],10);
+      const mm = parseInt(m[5],10);
+      if(mon!=null){
+        return new Date(year, mon, day, hh, mm, 0, 0).getTime();
+      }
+    }
+    // Fallback to Date.parse (best-effort)
+    const t = Date.parse(s);
+    return Number.isNaN(t) ? NaN : t;
+  }
+
+  // CSV parser with full quotes-handling (commas and newlines inside quotes)
+  function parseCSV(text){
+    if(text.charCodeAt(0) === 0xFEFF){ text = text.slice(1); } // BOM
+    const rows = [];
+    let i=0, len=text.length;
+    let cur = '', row=[], inQ=false;
+    while(i < len){
+      const ch = text[i];
+      if(inQ){
+        if(ch === '"'){
+          if(i+1 < len && text[i+1] === '"'){ cur += '"'; i+=2; continue; } // escaped quote
+          inQ = false; i++; continue;
+        } else {
+          cur += ch; i++; continue;
         }
-        
-        // 解析CSV数据 (使用 Papa Parse 库进行更准确的解析)
-        function parseCSV(csvText) {
-            allData = [];
-            const lines = csvText.split('\n');
-            
-            for (let i = 0; i < lines.length; i++) {
-                const line = lines[i].trim();
-                if (!line) continue;
-                
-                // 手动解析CSV行，处理引号中的逗号
-                const fields = parseCSVLine(line);
-                if (fields.length >= 4) {
-                    allData.push({
-                        artist: fields[0],
-                        album: fields[1],
-                        song: fields[2],
-                        timestamp: fields[3]
-                    });
-                }
-            }
-            
-            console.log('总共加载了', allData.length, '条记录');
-            
-            // 更新数据
-            updateData();
+      } else {
+        if(ch === '"'){ inQ = true; i++; continue; }
+        if(ch === ','){ row.push(cur); cur=''; i++; continue; }
+        if(ch === '\r'){
+          if(i+1 < len && text[i+1] === '\n'){ // CRLF
+            row.push(cur); rows.push(row); row=[]; cur=''; i+=2; continue;
+          } else { // lone CR
+            row.push(cur); rows.push(row); row=[]; cur=''; i++; continue;
+          }
         }
-        
-        // 解析CSV单行数据（处理逗号在引号内的情况）
-        function parseCSVLine(line) {
-            const result = [];
-            let current = '';
-            let inQuotes = false;
-            
-            for (let i = 0; i < line.length; i++) {
-                const char = line[i];
-                
-                if (char === '"') {
-                    // 检查是否是转义的引号
-                    if (i + 1 < line.length && line[i + 1] === '"') {
-                        current += '"';
-                        i++; // 跳过下一个引号
-                    } else {
-                        inQuotes = !inQuotes;
-                    }
-                } else if (char === ',' && !inQuotes) {
-                    result.push(current.trim());
-                    current = '';
-                } else {
-                    current += char;
-                }
-            }
-            
-            // 添加最后一个字段
-            result.push(current.trim());
-            
-            // 确保返回4个字段
-            while (result.length < 4) {
-                result.push('');
-            }
-            
-            return result.slice(0, 4);
+        if(ch === '\n'){
+          row.push(cur); rows.push(row); row=[]; cur=''; i++; continue;
         }
-        
-        // 更新数据（根据日期筛选）
-        function updateData() {
-            const startDateStr = document.getElementById('startDate').value;
-            const endDateStr = document.getElementById('endDate').value;
-            
-            if (!startDateStr || !endDateStr) {
-                alert('请选择完整的日期范围');
-                return;
-            }
-            
-            const startDate = new Date(startDateStr);
-            const endDate = new Date(endDateStr);
-            endDate.setHours(23, 59, 59, 999); // 结束日期设为当天最后一刻
-            
-            console.log('筛选日期范围:', startDate, '到', endDate);
-            
-            // 筛选数据
-            filteredData = allData.filter(item => {
-                try {
-                    // 解析时间戳 (格式: "05 Sep 2025 14:19")
-                    const parts = item.timestamp.split(' ');
-                    if (parts.length < 4) return false;
-                    
-                    const day = parseInt(parts[0]);
-                    const month = getMonthNumber(parts[1]);
-                    const year = parseInt(parts[2]);
-                    const timeParts = parts[3].split(':');
-                    const hour = parseInt(timeParts[0]);
-                    const minute = parseInt(timeParts[1]);
-                    
-                    const itemDate = new Date(year, month, day, hour, minute);
-                    return itemDate >= startDate && itemDate <= endDate;
-                } catch (e) {
-                    console.error('解析时间戳出错:', item.timestamp, e);
-                    return false;
-                }
-            });
-            
-            console.log('筛选出', filteredData.length, '条记录');
-            
-            // 更新显示
-            document.getElementById('loading').style.display = 'none';
-            document.getElementById('content').style.display = 'block';
-            
-            // 更新图表和表格
-            updateCharts();
-            updateTables();
-        }
-        
-        // 获取月份数字
-        function getMonthNumber(monthStr) {
-            const months = {
-                'Jan': 0, 'Feb': 1, 'Mar': 2, 'Apr': 3, 'May': 4, 'Jun': 5,
-                'Jul': 6, 'Aug': 7, 'Sep': 8, 'Oct': 9, 'Nov': 10, 'Dec': 11
-            };
-            return months[monthStr] || 0;
-        }
-        
-        // 更新图表
-        function updateCharts() {
-            // 准备星期分布数据
-            const weekdayData = Array(7).fill(0);
-            const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
-            
-            // 准备小时分布数据
-            const hourData = Array(24).fill(0);
-            
-            filteredData.forEach(item => {
-                try {
-                    const parts = item.timestamp.split(' ');
-                    const day = parseInt(parts[0]);
-                    const month = getMonthNumber(parts[1]);
-                    const year = parseInt(parts[2]);
-                    const timeParts = parts[3].split(':');
-                    const hour = parseInt(timeParts[0]);
-                    const minute = parseInt(timeParts[1]);
-                    
-                    const itemDate = new Date(year, month, day, hour, minute);
-                    
-                    // 星期分布
-                    weekdayData[itemDate.getDay()]++;
-                    
-                    // 小时分布
-                    hourData[hour]++;
-                } catch (e) {
-                    console.error('处理时间数据出错:', item.timestamp, e);
-                }
-            });
-            
-            console.log('星期分布数据:', weekdayData);
-            console.log('小时分布数据:', hourData);
-            
-            // 更新星期分布图表
-            const weekdayCtx = document.getElementById('weekdayChart').getContext('2d');
-            if (weekdayChart) {
-                weekdayChart.destroy();
-            }
-            weekdayChart = new Chart(weekdayCtx, {
-                type: 'bar',
-                data: {
-                    labels: weekdays,
-                    datasets: [{
-                        label: '听歌次数',
-                        data: weekdayData,
-                        backgroundColor: 'rgba(29, 185, 84, 0.7)',
-                        borderColor: 'rgba(29, 185, 84, 1)',
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                stepSize: 1
-                            }
-                        }
-                    }
-                }
-            });
-            
-            // 更新小时分布图表
-            const hourCtx = document.getElementById('hourChart').getContext('2d');
-            if (hourChart) {
-                hourChart.destroy();
-            }
-            hourChart = new Chart(hourCtx, {
-                type: 'line',
-                data: {
-                    labels: Array.from({length: 24}, (_, i) => `${i}点`),
-                    datasets: [{
-                        label: '听歌次数',
-                        data: hourData,
-                        fill: true,
-                        backgroundColor: 'rgba(29, 185, 84, 0.2)',
-                        borderColor: 'rgba(29, 185, 84, 1)',
-                        tension: 0.3
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                stepSize: 1
-                            }
-                        }
-                    }
-                }
-            });
-        }
-        
-        // 更新表格
-        function updateTables() {
-            // 统计歌曲、艺人、专辑播放次数
-            const songCounts = {};
-            const artistCounts = {};
-            const albumCounts = {};
-            
-            filteredData.forEach(item => {
-                // 统计歌曲
-                const songKey = `${item.song}@@@${item.artist}`;
-                songCounts[songKey] = (songCounts[songKey] || 0) + 1;
-                
-                // 统计艺人
-                artistCounts[item.artist] = (artistCounts[item.artist] || 0) + 1;
-                
-                // 统计专辑
-                const albumKey = `${item.album}@@@${item.artist}`;
-                albumCounts[albumKey] = (albumCounts[albumKey] || 0) + 1;
-            });
-            
-            // 转换为数组并排序
-            const sortedSongs = Object.entries(songCounts)
-                .map(([key, count]) => {
-                    const [song, artist] = key.split('@@@');
-                    return { song, artist, count };
-                })
-                .sort((a, b) => b.count - a.count);
-            
-            const sortedArtists = Object.entries(artistCounts)
-                .map(([artist, count]) => ({ artist, count }))
-                .sort((a, b) => b.count - a.count);
-            
-            const sortedAlbums = Object.entries(albumCounts)
-                .map(([key, count]) => {
-                    const [album, artist] = key.split('@@@');
-                    return { album, artist, count };
-                })
-                .sort((a, b) => b.count - a.count);
-            
-            // 更新歌曲表格
-            const songsTableBody = document.querySelector('#songsTable tbody');
-            songsTableBody.innerHTML = '';
-            sortedSongs.slice(0, 20).forEach((item, index) => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${index + 1}</td>
-                    <td>${item.song}</td>
-                    <td>${item.artist}</td>
-                    <td>${item.count}</td>
-                `;
-                songsTableBody.appendChild(row);
-            });
-            
-            // 更新艺人表格
-            const artistsTableBody = document.querySelector('#artistsTable tbody');
-            artistsTableBody.innerHTML = '';
-            sortedArtists.slice(0, 20).forEach((item, index) => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${index + 1}</td>
-                    <td>${item.artist}</td>
-                    <td>${item.count}</td>
-                `;
-                artistsTableBody.appendChild(row);
-            });
-            
-            // 更新专辑表格
-            const albumsTableBody = document.querySelector('#albumsTable tbody');
-            albumsTableBody.innerHTML = '';
-            sortedAlbums.slice(0, 20).forEach((item, index) => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${index + 1}</td>
-                    <td>${item.album}</td>
-                    <td>${item.artist}</td>
-                    <td>${item.count}</td>
-                `;
-                albumsTableBody.appendChild(row);
-            });
-        }
-        
-        // 随机选择歌曲
-        function selectRandomSongs() {
-            const count = parseInt(document.getElementById('randomCount').value);
-            const randomResults = document.getElementById('randomResults');
-            
-            // 获取所有唯一的歌曲
-            const uniqueSongs = {};
-            filteredData.forEach(item => {
-                const key = `${item.song}@@@${item.artist}`;
-                if (!uniqueSongs[key]) {
-                    uniqueSongs[key] = {
-                        song: item.song,
-                        artist: item.artist,
-                        album: item.album
-                    };
-                }
-            });
-            
-            const songs = Object.values(uniqueSongs);
-            
-            // 如果请求数量大于唯一歌曲数，调整为唯一歌曲数
-            const actualCount = Math.min(count, songs.length);
-            
-            // 随机选择
-            const selectedSongs = [];
-            const usedIndices = new Set();
-            
-            while (selectedSongs.length < actualCount) {
-                const randomIndex = Math.floor(Math.random() * songs.length);
-                if (!usedIndices.has(randomIndex)) {
-                    usedIndices.add(randomIndex);
-                    selectedSongs.push(songs[randomIndex]);
-                }
-            }
-            
-            // 显示结果
-            randomResults.innerHTML = '';
-            selectedSongs.forEach(song => {
-                const itemDiv = document.createElement('div');
-                itemDiv.className = 'random-item';
-                itemDiv.innerHTML = `
-                    <h4>${song.song}</h4>
-                    <p><strong>艺人:</strong> ${song.artist}</p>
-                    <p><strong>专辑:</strong> ${song.album}</p>
-                `;
-                randomResults.appendChild(itemDiv);
-            });
-        }
-    </script>
+        cur += ch; i++;
+      }
+    }
+    // finalize
+    if(cur.length>0 || row.length>0){ row.push(cur); rows.push(row); }
+    // filter rows to those with at least 4 fields
+    return rows.filter(r => r.length >= 4);
+  }
+
+  function lowerBoundByTime(arr, ms){
+    let lo=0, hi=arr.length;
+    while(lo<hi){
+      const mid=(lo+hi)>>1;
+      if(arr[mid].ms < ms) lo=mid+1; else hi=mid;
+    }
+    return lo;
+  }
+  function upperBoundByTime(arr, ms){
+    let lo=0, hi=arr.length;
+    while(lo<hi){
+      const mid=(lo+hi)>>1;
+      if(arr[mid].ms <= ms) lo=mid+1; else hi=mid;
+    }
+    return lo;
+  }
+
+  function uniqueKeyTrack(a,b,t){ return `${a}\u0001${b}\u0001${t}`; }
+  function uniqueKeyAlbum(a,b){ return `${a}\u0001${b}`; }
+
+  // ---------- Fetch with fallbacks ----------
+  async function fetchWithFallback(urls){
+    let lastErr = null;
+    for(const url of urls){
+      try{
+        const res = await fetch(url, {mode:'cors', credentials:'omit', cache:'no-store', referrerPolicy:'no-referrer'});
+        if(!res.ok) throw new Error(`HTTP ${res.status}`);
+        const text = await res.text();
+        if(!text || !text.includes(',')) throw new Error('Empty/invalid CSV');
+        return {text, url};
+      }catch(e){
+        lastErr = e;
+      }
+    }
+    throw lastErr || new Error('All sources failed');
+  }
+
+  // ---------- Compute and Render ----------
+  function applyFilter(){
+    const s = el.startDate.value;
+    const e = el.endDate.value;
+    if(!s || !e) return;
+    let startMs = parseDateInput(s);
+    let endMs = endOfDayMs(parseDateInput(e));
+    // view window
+    state.viewStartMs = startMs;
+    state.viewEndMs = endMs;
+
+    // slice by time (records already sorted)
+    const startIdx = lowerBoundByTime(state.records, startMs);
+    const endIdx = upperBoundByTime(state.records, endMs);
+    state.filteredSlice = [startIdx, endIdx];
+    state.page = 1; // reset page on filter change
+
+    renderAll();
+  }
+
+  function renderAll(){
+    const [i0, i1] = state.filteredSlice;
+    const subset = state.records.slice(i0, i1);
+    // Summary
+    el.sumCount.textContent = fmtNum(subset.length);
+
+    // Dist + counts
+    const week = Array(7).fill(0);
+    const hour = Array(24).fill(0);
+    const mapArtist = new Map();
+    const mapAlbum = new Map(); // key: artist␁album
+    const mapTrack = new Map(); // key: artist␁album␁track
+
+    for(const r of subset){
+      const d = new Date(r.ms);
+      week[d.getDay()]++;
+      hour[d.getHours()]++;
+      // artist
+      mapArtist.set(r.a, (mapArtist.get(r.a) || 0) + 1);
+      // album (artist + album 作为唯一键，显示时分开)
+      const kA = uniqueKeyAlbum(r.a, r.b);
+      mapAlbum.set(kA, (mapAlbum.get(kA) || 0) + 1);
+      // track (artist + album + track)
+      const kT = uniqueKeyTrack(r.a, r.b, r.t);
+      mapTrack.set(kT, (mapTrack.get(kT) || 0) + 1);
+    }
+    el.sumArtists.textContent = fmtNum(mapArtist.size);
+    el.sumAlbums.textContent = fmtNum(mapAlbum.size);
+    el.sumTracks.textContent = fmtNum(mapTrack.size);
+
+    // Range info
+    const rng = `${formatDateInput(new Date(state.viewStartMs))} ~ ${formatDateInput(new Date(state.viewEndMs))}`;
+    const cov = subset.length ? `${formatDateInput(new Date(state.records[0].ms))} ~ ${formatDateInput(new Date(state.records[state.records.length-1].ms))}` : '-';
+    el.rangeInfo.textContent = `数据覆盖：${cov} | 命中 ${fmtNum(subset.length)} 条`;
+
+    // Charts
+    renderBars(el.weekBars, el.weekLabels, week, WEEK_NAMES, 7, true);
+    renderBars(el.hourBars, el.hourLabels, hour, Array.from({length:24}, (_,i)=>String(i)), 24, false);
+
+    // Ranking
+    const rankType = state.rankType;
+    let items = [];
+    if(rankType === 'artist'){
+      for(const [name, count] of mapArtist.entries()){
+        items.push({count, artist:name});
+      }
+      items.sort(byCountDesc);
+      renderRankTable('artist', items);
+    }else if(rankType === 'album'){
+      for(const [key, count] of mapAlbum.entries()){
+        const [artist, album] = key.split('\u0001');
+        items.push({count, album, artist});
+      }
+      items.sort(byCountDesc);
+      renderRankTable('album', items);
+    }else{
+      for(const [key, count] of mapTrack.entries()){
+        const [artist, album, track] = key.split('\u0001');
+        items.push({count, track, artist, album});
+      }
+      items.sort(byCountDesc);
+      renderRankTable('track', items);
+    }
+    const totalPages = Math.max(1, Math.ceil(items.length / state.pageSize));
+    state.page = clamp(state.page, 1, totalPages);
+    el.pageNum.textContent = String(state.page);
+    el.pageTotal.textContent = String(totalPages);
+    el.rankInfo.textContent = `共 ${fmtNum(items.length)} 项 · 每页 ${state.pageSize}`;
+
+    const start = (state.page - 1) * state.pageSize;
+    const end = Math.min(items.length, start + state.pageSize);
+    renderRankBody(rankType, items.slice(start, end), start);
+  }
+
+  function renderBars(container, labelsEl, data, labels, cols, alt){
+    container.innerHTML = '';
+    labelsEl.innerHTML = '';
+    let max = 0;
+    for(const v of data) if(v > max) max = v;
+    max = Math.max(max, 1);
+    data.forEach((v, idx)=>{
+      const div = document.createElement('div');
+      div.className = 'bar' + (alt ? ' alt' : '');
+      const h = Math.round((v / max) * 100);
+      div.style.height = `${h}%`;
+      div.setAttribute('data-label', `${labels[idx]}：${fmtNum(v)}`);
+      container.appendChild(div);
+
+      const lab = document.createElement('div');
+      lab.textContent = labels[idx];
+      labelsEl.style.setProperty('--cols', cols);
+      labelsEl.appendChild(lab);
+    });
+  }
+
+  function renderRankTable(type, items){
+    el.rankTitle.textContent = `排行榜 · ${ type==='artist' ? '艺人' : type==='album' ? '专辑' : '歌曲' }`;
+    // Head
+    let headHTML = '';
+    if(type==='artist'){
+      headHTML = '<th style="width:72px">#</th><th>艺人</th><th style="width:120px">次数</th>';
+    }else if(type==='album'){
+      headHTML = '<th style="width:72px">#</th><th>专辑</th><th>艺人</th><th style="width:120px">次数</th>';
+    }else{
+      headHTML = '<th style="width:72px">#</th><th>歌曲</th><th>艺人</th><th>专辑</th><th style="width:120px">次数</th>';
+    }
+    el.rankHead.innerHTML = `<tr>${headHTML}</tr>`;
+    // Store current items total for pagination info
+  }
+  function renderRankBody(type, pageItems, globalStartIndex){
+    el.rankBody.innerHTML = '';
+    const frag = document.createDocumentFragment();
+    pageItems.forEach((it, i)=>{
+      const tr = document.createElement('tr');
+      const rank = globalStartIndex + i + 1;
+      if(type==='artist'){
+        tr.innerHTML = `<td>${rank}</td><td>${escapeHTML(it.artist)}</td><td>${fmtNum(it.count)}</td>`;
+      }else if(type==='album'){
+        tr.innerHTML = `<td>${rank}</td><td>${escapeHTML(it.album)}</td><td>${escapeHTML(it.artist)}</td><td>${fmtNum(it.count)}</td>`;
+      }else{
+        tr.innerHTML = `<td>${rank}</td><td>${escapeHTML(it.track)}</td><td>${escapeHTML(it.artist)}</td><td>${escapeHTML(it.album)}</td><td>${fmtNum(it.count)}</td>`;
+      }
+      frag.appendChild(tr);
+    });
+    el.rankBody.appendChild(frag);
+  }
+
+  function escapeHTML(s){
+    return String(s).replace(/[&<>"']/g, c => ({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    }[c]));
+  }
+
+  function randomPickTracks(){
+    const [i0, i1] = state.filteredSlice;
+    const subset = state.records.slice(i0, i1);
+    const uniq = new Map(); // k -> {artist, album, track}
+    for(const r of subset){
+      const k = uniqueKeyTrack(r.a, r.b, r.t);
+      if(!uniq.has(k)) uniq.set(k, {artist:r.a, album:r.b, track:r.t});
+    }
+    const want = parseInt(el.randCount.value, 10);
+    const pool = Array.from(uniq.values());
+    if(pool.length === 0){
+      el.randomUl.innerHTML = '<li>当前时间范围内没有数据</li>';
+      return;
+    }
+    // shuffle using crypto if available
+    const idxArr = [...pool.keys()];
+    if(window.crypto && crypto.getRandomValues){
+      // Fisher-Yates with crypto
+      for(let i=idxArr.length-1;i>0;i--){
+        const r = new Uint32Array(1); crypto.getRandomValues(r);
+        const j = r[0] % (i+1);
+        [idxArr[i], idxArr[j]] = [idxArr[j], idxArr[i]];
+      }
+    }else{
+      for(let i=idxArr.length-1;i>0;i--){
+        const j = Math.floor(Math.random() * (i+1));
+        [idxArr[i], idxArr[j]] = [idxArr[j], idxArr[i]];
+      }
+    }
+    const sel = idxArr.slice(0, Math.min(want, pool.length)).map(i=>pool[i]);
+    el.randomUl.innerHTML = '';
+    sel.forEach(it=>{
+      const li = document.createElement('li');
+      li.textContent = `${it.track} — ${it.artist} （${it.album}）`;
+      el.randomUl.appendChild(li);
+    });
+  }
+
+  // ---------- Init ----------
+  function initDates(){
+    const today = new Date();
+    const start = new Date(today.getTime() - 5000*24*3600*1000);
+    el.startDate.value = formatDateInput(start);
+    el.endDate.value = formatDateInput(today);
+    // Allow selecting wide range
+    el.startDate.max = formatDateInput(today);
+    el.endDate.max = formatDateInput(today);
+  }
+
+  function wireEvents(){
+    const debouncedApply = debounce(applyFilter, 200);
+    el.startDate.addEventListener('change', ()=>{
+      // keep start <= end
+      if(el.endDate.value && el.startDate.value > el.endDate.value){
+        el.endDate.value = el.startDate.value;
+      }
+      debouncedApply();
+    });
+    el.endDate.addEventListener('change', ()=>{
+      if(el.startDate.value && el.endDate.value < el.startDate.value){
+        el.startDate.value = el.endDate.value;
+      }
+      debouncedApply();
+    });
+    el.rankType.addEventListener('change', ()=>{
+      state.rankType = el.rankType.value;
+      state.page = 1;
+      renderAll();
+    });
+    el.pageSize.addEventListener('change', ()=>{
+      state.pageSize = parseInt(el.pageSize.value,10);
+      state.page = 1;
+      renderAll();
+    });
+    el.prevPage.addEventListener('click', ()=>{
+      state.page = Math.max(1, state.page - 1);
+      renderAll();
+    });
+    el.nextPage.addEventListener('click', ()=>{
+      state.page = state.page + 1;
+      renderAll();
+    });
+    el.randBtn.addEventListener('click', randomPickTracks);
+  }
+
+  function debounce(fn, wait){
+    let t=null; return (...args)=>{ clearTimeout(t); t=setTimeout(()=>fn(...args), wait); };
+  }
+
+  async function loadData(){
+    try{
+      setLoading(true, '正在加载数据…');
+      const {text, url} = await fetchWithFallback(SOURCES);
+      state.sourceUsed = url;
+      el.sourceInfo.textContent = `数据源：${url}`;
+      setLoading(true, '正在解析 CSV…（请稍候）');
+
+      const rows = parseCSV(text);
+      // rows: [artist, album, track, time]
+      const recs = [];
+      for(const r of rows){
+        const artist = r[0];
+        const album  = r[1];
+        const track  = r[2];
+        const timeStr= r[3];
+        const ms = parseLastfmTime(timeStr);
+        if(!artist || !album || !track || Number.isNaN(ms)) continue; // 跳过异常行/表头
+        recs.push({a:artist, b:album, t:track, ms});
+      }
+      recs.sort((x,y)=> x.ms - y.ms);
+      state.records = recs;
+      if(recs.length){
+        state.minMs = recs[0].ms; state.maxMs = recs[recs.length-1].ms;
+      }
+      setLoading(false, `加载完成：${fmtNum(recs.length)} 条记录`);
+      // 初次应用过滤
+      applyFilter();
+    }catch(err){
+      console.error(err);
+      setLoading(false, '加载失败，请刷新重试');
+      el.sourceInfo.textContent = `数据源加载失败：${err?.message || err}`;
+      alert('CSV 加载失败：' + (err?.message || err));
+    }
+  }
+
+  function setLoading(isLoading, text){
+    el.loading.style.display = isLoading ? 'inline-block' : 'none';
+    el.statusText.textContent = text || '';
+  }
+
+  // Boot
+  initDates();
+  wireEvents();
+  loadData();
+
+})();
+</script>
 </body>
 </html>

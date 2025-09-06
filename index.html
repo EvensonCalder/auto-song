@@ -1,642 +1,566 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title> Evenson Last.fm 听歌数据可视化</title>
-<style>
-  :root{
-    --bg:#ffffff;--fg:#111827;--muted:#6b7280;--panel:#f8fafc;--border:#e5e7eb;
-    --primary:#2563eb;--accent:#059669;--bar:#4f46e5;--bar2:#059669;--chip:#eef2ff;
-  }
-  @media (prefers-color-scheme: dark){
-    :root{
-      --bg:#0b0f14;--fg:#e5e7eb;--muted:#9ca3af;--panel:#10161d;--border:#1f2937;
-      --primary:#3b82f6;--accent:#10b981;--bar:#6366f1;--bar2:#22c55e;--chip:#1f2937;
-    }
-    table tbody tr:hover{background:#0f172a;}
-  }
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"PingFang SC","Noto Sans CJK SC","Microsoft YaHei",sans-serif;}
-  header{position:sticky;top:0;z-index:5;background:var(--panel);border-bottom:1px solid var(--border);padding:14px 18px;}
-  header h1{margin:0;font-size:18px}
-  header .sub{color:var(--muted);font-size:12px;margin-top:4px}
-  .container{max-width:1200px;margin:0 auto;padding:16px 18px;}
-  .controls{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;margin:8px 0 16px}
-  .field{display:flex;flex-direction:column;gap:6px}
-  .field label{font-size:12px;color:var(--muted)}
-  input[type="date"],select{padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:#fff;color:#111827;min-width:160px}
-  @media (prefers-color-scheme: dark){
-    input[type="date"],select{background:#0b1220;color:var(--fg)}
-  }
-  button{padding:9px 12px;border:1px solid var(--border);border-radius:8px;background:var(--primary);color:#fff;cursor:pointer}
-  button.secondary{background:transparent;color:var(--fg)}
-  button:disabled{opacity:0.6;cursor:not-allowed}
-  .chips{display:flex;gap:6px;flex-wrap:wrap}
-  .chip{font-size:12px;background:var(--chip);border:1px solid var(--border);padding:4px 8px;border-radius:999px;color:var(--muted)}
-  .grid{display:grid;grid-template-columns:1.2fr 1fr;gap:16px}
-  @media (max-width: 980px){ .grid{grid-template-columns:1fr} }
-  .card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:12px}
-  .card h3{margin:0 0 8px;font-size:16px}
-  .summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
-  @media (max-width: 980px){ .summary{grid-template-columns:repeat(2,1fr)} }
-  .summary .item{background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px}
-  @media (prefers-color-scheme: dark){ .summary .item{background:#0b1220} }
-  .summary .k{font-size:12px;color:var(--muted)}
-  .summary .v{font-weight:700;font-size:18px;margin-top:2px}
-  .charts{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-  @media (max-width: 980px){ .charts{grid-template-columns:1fr} }
-  .bars{height:170px;display:flex;align-items:flex-end;gap:6px;border-bottom:1px solid var(--border);padding:8px 4px 0}
-  .bar{flex:1;background:linear-gradient(to top,var(--bar),var(--bar));border-radius:4px 4px 0 0;position:relative;min-width:8px}
-  .bar.alt{background:linear-gradient(to top,var(--bar2),var(--bar2))}
-  .bar:hover::after{
-    content:attr(data-label);
-    position:absolute;bottom:100%;left:50%;transform:translateX(-50%);
-    background:rgba(0,0,0,.75);color:#fff;padding:3px 6px;font-size:12px;border-radius:4px;white-space:nowrap
-  }
-  .bar-labels{display:grid;grid-template-columns:repeat(var(--cols,7),1fr);gap:6px;margin-top:6px;font-size:12px;color:var(--muted);text-align:center}
-  table{width:100%;border-collapse:collapse}
-  thead th{position:sticky;top:0;background:var(--panel)}
-  th,td{padding:10px 8px;border-bottom:1px solid var(--border);font-size:14px;text-align:left}
-  tbody tr:hover{background:rgba(0,0,0,0.03)}
-  .pager{display:flex;gap:10px;align-items:center;justify-content:flex-end;padding-top:8px}
-  .muted{color:var(--muted)}
-  .status{font-size:13px;color:var(--muted);display:flex;gap:8px;align-items:center}
-  .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);display:inline-block}
-  .loading{display:inline-block;width:12px;height:12px;border:2px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin 1s linear infinite}
-  @keyframes spin{to{transform:rotate(360deg)}}
-  .wrap{overflow:auto}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Evenson Last.fm 听歌记录分析</title>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.0/papaparse.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f8f9fa;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #2c3e50;
+        }
+        
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .section {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+        }
+        
+        .section-title {
+            margin-bottom: 15px;
+            color: #3498db;
+            font-size: 1.2rem;
+        }
+        
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+        }
+        
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        label {
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+        
+        input, select, button {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+        
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        button:hover {
+            background-color: #2980b9;
+        }
+        
+        .random-result {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            min-height: 50px;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
+        
+        .ranking-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .ranking-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .ranking-table th, .ranking-table td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .ranking-table th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+        }
+        
+        .ranking-table tr:hover {
+            background-color: #f5f5f5;
+        }
+        
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            font-style: italic;
+            color: #7f8c8d;
+        }
+        
+        .random-result ul {
+            padding-left: 1.5em;
+            margin: 0;
+            list-style-position: inside;
+        }
+
+        .random-result li {
+            margin-bottom: 5px;
+            text-indent: -1.2em;
+            padding-left: 1.2em;
+        }
+        
+        @media (max-width: 768px) {
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .control-group {
+                width: 100%;
+            }
+            
+            .ranking-table {
+                font-size: 0.9rem;
+            }
+            
+            .ranking-table th, .ranking-table td {
+                padding: 8px 5px;
+            }
+        }
+    </style>
 </head>
 <body>
-<header>
-  <h1> evenson Last.fm 听歌数据可视化</h1>
-  <div class="sub">支持时间筛选、分布图、排行榜与随机选歌</div>
-</header>
-
-<div class="container">
-  <div class="controls">
-    <div class="field">
-      <label for="startDate">开始日期</label>
-      <input type="date" id="startDate">
+    <h1>Evenson Last.fm 听歌记录分析</h1>
+    
+    <div class="container">
+        <div class="section">
+            <h2 class="section-title">时间范围选择</h2>
+            <div class="controls">
+                <div class="control-group">
+                    <label for="start-date">开始日期</label>
+                    <input type="date" id="start-date">
+                </div>
+                <div class="control-group">
+                    <label for="end-date">结束日期</label>
+                    <input type="date" id="end-date">
+                </div>
+                <div class="control-group">
+                    <label style="visibility: hidden;">应用筛选</label>
+                    <button id="apply-filter">应用筛选</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2 class="section-title">随机选歌</h2>
+            <div class="controls">
+                <div class="control-group">
+                    <label for="random-count">选择数量</label>
+                    <select id="random-count">
+                        <option value="1">1 首</option>
+                        <option value="5">5 首</option>
+                        <option value="10">10 首</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label style="visibility: hidden;">随机选取</label>
+                    <button id="random-select">随机选取</button>
+                </div>
+            </div>
+            <div class="random-result" id="random-result"></div>
+        </div>
+        
+        <div class="section">
+            <h2 class="section-title">排行榜</h2>
+            <div class="ranking-controls">
+                <select id="ranking-type">
+                    <option value="song">歌曲排行榜</option>
+                    <option value="artist">艺人排行榜</option>
+                    <option value="album">专辑排行榜</option>
+                </select>
+                <button id="prev-page">上一页</button>
+                <button id="next-page">下一页</button>
+            </div>
+            <div id="ranking-container">
+                <div class="loading">加载中...</div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2 class="section-title">星期分布</h2>
+            <div class="chart-container">
+                <canvas id="day-of-week-chart"></canvas>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2 class="section-title">24小时分布</h2>
+            <div class="chart-container">
+                <canvas id="hour-of-day-chart"></canvas>
+            </div>
+        </div>
     </div>
-    <div class="field">
-      <label for="endDate">结束日期</label>
-      <input type="date" id="endDate">
-    </div>
-    <div class="field">
-      <label for="rankType">排行榜</label>
-      <select id="rankType">
-        <option value="track">歌曲</option>
-        <option value="artist">艺人</option>
-        <option value="album">专辑</option>
-      </select>
-    </div>
-    <div class="field">
-      <label for="pageSize">每页条数</label>
-      <select id="pageSize">
-        <option>10</option>
-        <option selected>25</option>
-        <option>50</option>
-        <option>100</option>
-      </select>
-    </div>
-    <div class="field">
-      <label for="randCount">随机选取</label>
-      <div style="display:flex;gap:8px;align-items:center">
-        <select id="randCount" style="min-width:90px">
-          <option value="1">1 首</option>
-          <option value="5" selected>5 首</option>
-          <option value="10">10 首</option>
-        </select>
-        <button id="randBtn" class="secondary">随机选歌</button>
-      </div>
-    </div>
-    <div style="margin-left:auto" class="status">
-      <span id="loading" class="loading"></span>
-      <span id="statusText">正在加载数据…</span>
-    </div>
-  </div>
 
-  <div class="grid">
-    <div class="card">
-      <h3>数据摘要</h3>
-      <div class="summary" id="summary">
-        <div class="item"><div class="k">播放次数</div><div class="v" id="sumCount">-</div></div>
-        <div class="item"><div class="k">不同歌曲数</div><div class="v" id="sumTracks">-</div></div>
-        <div class="item"><div class="k">不同艺人数</div><div class="v" id="sumArtists">-</div></div>
-        <div class="item"><div class="k">不同专辑数</div><div class="v" id="sumAlbums">-</div></div>
-      </div>
-      <div class="muted" id="rangeInfo" style="margin-top:8px">-</div>
-    </div>
-
-    <div class="card">
-      <h3>随机选取结果</h3>
-      <div id="randomList" class="wrap" style="max-height:180px;overflow:auto">
-        <ul id="randomUl" style="margin:6px 0 0 18px; padding:0"></ul>
-      </div>
-    </div>
-  </div>
-
-  <div class="card" style="margin-top:14px">
-    <h3>时间分布</h3>
-    <div class="charts">
-      <div>
-        <div class="muted" style="margin-bottom:4px">按星期</div>
-        <div class="bars" id="weekBars"></div>
-        <div class="bar-labels" id="weekLabels" style="--cols:7"></div>
-      </div>
-      <div>
-        <div class="muted" style="margin-bottom:4px">按小时</div>
-        <div class="bars" id="hourBars"></div>
-        <div class="bar-labels" id="hourLabels" style="--cols:24"></div>
-      </div>
-    </div>
-  </div>
-
-  <div class="card" style="margin-top:14px">
-    <div style="display:flex;align-items:center;justify-content:space-between">
-      <h3 id="rankTitle">排行榜 · 歌曲</h3>
-      <div class="muted" id="rankInfo">-</div>
-    </div>
-    <div class="wrap" style="max-height:420px;overflow:auto;margin-top:6px">
-      <table id="rankTable">
-        <thead>
-          <tr id="rankHead"></tr>
-        </thead>
-        <tbody id="rankBody"></tbody>
-      </table>
-    </div>
-    <div class="pager">
-      <button id="prevPage" class="secondary">上一页</button>
-      <span class="muted">第 <span id="pageNum">1</span> / <span id="pageTotal">1</span> 页</span>
-      <button id="nextPage" class="secondary">下一页</button>
-    </div>
-  </div>
-
-  <div style="margin-top:10px" class="status">
-    <span class="dot"></span>
-    <span id="sourceInfo">数据源：-</span>
-  </div>
-</div>
-
-<script>
-(()=>{
-  // ---------- Config ----------
-  const SOURCES = [
-    "https://raw.githubusercontent.com/EvensonCalder/auto-song/main/proevenson.csv",
-    "https://cdn.jsdelivr.net/gh/EvensonCalder/auto-song@main/proevenson.csv",
-    "https://gcore.jsdelivr.net/gh/EvensonCalder/auto-song@main/proevenson.csv"
-  ];
-  const WEEK_NAMES = ["周日","周一","周二","周三","周四","周五","周六"]; // JS getDay(): 0=周日
-  const MONTHS = {Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Sept:8,Oct:9,Nov:10,Dec:11};
-
-  // ---------- State ----------
-  const state = {
-    records: [],      // {a, b, t, ms}
-    minMs: null, maxMs: null,
-    viewStartMs: null, viewEndMs: null,
-    filteredSlice: [0,0], // startIdx, endIdx (exclusive)
-    rankType: 'track',
-    pageSize: 25,
-    page: 1,
-    sourceUsed: null
-  };
-
-  // ---------- DOM ----------
-  const el = {
-    startDate: document.getElementById('startDate'),
-    endDate: document.getElementById('endDate'),
-    rankType: document.getElementById('rankType'),
-    pageSize: document.getElementById('pageSize'),
-    randCount: document.getElementById('randCount'),
-    randBtn: document.getElementById('randBtn'),
-    randomUl: document.getElementById('randomUl'),
-    loading: document.getElementById('loading'),
-    statusText: document.getElementById('statusText'),
-    sourceInfo: document.getElementById('sourceInfo'),
-    rangeInfo: document.getElementById('rangeInfo'),
-    sumCount: document.getElementById('sumCount'),
-    sumTracks: document.getElementById('sumTracks'),
-    sumArtists: document.getElementById('sumArtists'),
-    sumAlbums: document.getElementById('sumAlbums'),
-    weekBars: document.getElementById('weekBars'),
-    weekLabels: document.getElementById('weekLabels'),
-    hourBars: document.getElementById('hourBars'),
-    hourLabels: document.getElementById('hourLabels'),
-    rankTitle: document.getElementById('rankTitle'),
-    rankInfo: document.getElementById('rankInfo'),
-    rankHead: document.getElementById('rankHead'),
-    rankBody: document.getElementById('rankBody'),
-    prevPage: document.getElementById('prevPage'),
-    nextPage: document.getElementById('nextPage'),
-    pageNum: document.getElementById('pageNum'),
-    pageTotal: document.getElementById('pageTotal'),
-  };
-
-  // ---------- Utils ----------
-  function formatDateInput(d){
-    const y = d.getFullYear();
-    const m = String(d.getMonth()+1).padStart(2,'0');
-    const day = String(d.getDate()).padStart(2,'0');
-    return `${y}-${m}-${day}`;
-  }
-  function parseDateInput(s){ // yyyy-mm-dd -> local start of day
-    const [y,m,d] = s.split('-').map(Number);
-    return new Date(y, m-1, d, 0, 0, 0, 0).getTime();
-  }
-  function endOfDayMs(ms){
-    const d = new Date(ms);
-    return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23,59,59,999).getTime();
-  }
-  function fmtNum(n){ return n.toLocaleString(); }
-  function clamp(v, lo, hi){ return Math.min(Math.max(v, lo), hi); }
-  function byCountDesc(a, b){ return b.count - a.count; }
-
-  // Robust Last.fm time parser: "05 Sep 2025 14:19"
-  function parseLastfmTime(s){
-    if(!s) return NaN;
-    s = s.trim();
-    const m = /^(\d{1,2})\s+([A-Za-z]{3,4})\s+(\d{4})\s+(\d{2}):(\d{2})$/.exec(s);
-    if(m){
-      const day = parseInt(m[1],10);
-      const monKey = m[2].slice(0,4); // allow "Sept"
-      const mon = MONTHS[monKey] ?? MONTHS[m[2].slice(0,3)];
-      const year = parseInt(m[3],10);
-      const hh = parseInt(m[4],10);
-      const mm = parseInt(m[5],10);
-      if(mon!=null){
-        return new Date(year, mon, day, hh, mm, 0, 0).getTime();
-      }
-    }
-    // Fallback to Date.parse (best-effort)
-    const t = Date.parse(s);
-    return Number.isNaN(t) ? NaN : t;
-  }
-
-  // CSV parser with full quotes-handling (commas and newlines inside quotes)
-  function parseCSV(text){
-    if(text.charCodeAt(0) === 0xFEFF){ text = text.slice(1); } // BOM
-    const rows = [];
-    let i=0, len=text.length;
-    let cur = '', row=[], inQ=false;
-    while(i < len){
-      const ch = text[i];
-      if(inQ){
-        if(ch === '"'){
-          if(i+1 < len && text[i+1] === '"'){ cur += '"'; i+=2; continue; } // escaped quote
-          inQ = false; i++; continue;
-        } else {
-          cur += ch; i++; continue;
+    <script>
+        // 初始化变量
+        let allRecords = [];
+        let filteredRecords = [];
+        let currentPage = 1;
+        const itemsPerPage = 10;
+        let dayOfWeekChart, hourOfDayChart;
+        
+        // 星期名称映射
+        const dayNames = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+        
+        // 设置默认日期范围（今天之前的5000天到今天）
+        function setDefaultDateRange() {
+            const endDate = new Date();
+            const startDate = new Date();
+            startDate.setDate(endDate.getDate() - 5000);
+            
+            document.getElementById('start-date').valueAsDate = startDate;
+            document.getElementById('end-date').valueAsDate = endDate;
         }
-      } else {
-        if(ch === '"'){ inQ = true; i++; continue; }
-        if(ch === ','){ row.push(cur); cur=''; i++; continue; }
-        if(ch === '\r'){
-          if(i+1 < len && text[i+1] === '\n'){ // CRLF
-            row.push(cur); rows.push(row); row=[]; cur=''; i+=2; continue;
-          } else { // lone CR
-            row.push(cur); rows.push(row); row=[]; cur=''; i++; continue;
-          }
+        
+        // 从GitHub获取CSV数据
+        async function fetchData() {
+            try {
+                const response = await fetch('https://raw.githubusercontent.com/EvensonCalder/auto-song/main/proevenson.csv');
+                const csvData = await response.text();
+                
+                // 使用PapaParse解析CSV
+                Papa.parse(csvData, {
+                    header: false,
+                    skipEmptyLines: true,
+                    complete: function(results) {
+                        allRecords = results.data.map(row => {
+                            // 处理日期格式
+                            const dateStr = row[3];
+                            const date = new Date(dateStr);
+                            
+                            return {
+                                artist: row[0],
+                                album: row[1],
+                                song: row[2],
+                                timestamp: date,
+                                date: dateStr,
+                                dayOfWeek: date.getDay(),
+                                hourOfDay: date.getHours()
+                            };
+                        });
+                        
+                        // 应用默认日期范围
+                        filterRecords();
+                        updateAllVisualizations();
+                    }
+                });
+            } catch (error) {
+                console.error('获取数据时出错:', error);
+                alert('获取数据时出错，请检查控制台获取详细信息。');
+            }
         }
-        if(ch === '\n'){
-          row.push(cur); rows.push(row); row=[]; cur=''; i++; continue;
+        
+        // 根据日期范围筛选记录
+        function filterRecords() {
+            const startDate = new Date(document.getElementById('start-date').value);
+            const endDate = new Date(document.getElementById('end-date').value);
+            endDate.setHours(23, 59, 59, 999); // 包含结束日期的全天
+            
+            filteredRecords = allRecords.filter(record => {
+                return record.timestamp >= startDate && record.timestamp <= endDate;
+            });
         }
-        cur += ch; i++;
-      }
-    }
-    // finalize
-    if(cur.length>0 || row.length>0){ row.push(cur); rows.push(row); }
-    // filter rows to those with at least 4 fields
-    return rows.filter(r => r.length >= 4);
-  }
-
-  function lowerBoundByTime(arr, ms){
-    let lo=0, hi=arr.length;
-    while(lo<hi){
-      const mid=(lo+hi)>>1;
-      if(arr[mid].ms < ms) lo=mid+1; else hi=mid;
-    }
-    return lo;
-  }
-  function upperBoundByTime(arr, ms){
-    let lo=0, hi=arr.length;
-    while(lo<hi){
-      const mid=(lo+hi)>>1;
-      if(arr[mid].ms <= ms) lo=mid+1; else hi=mid;
-    }
-    return lo;
-  }
-
-  function uniqueKeyTrack(a,b,t){ return `${a}\u0001${b}\u0001${t}`; }
-  function uniqueKeyAlbum(a,b){ return `${a}\u0001${b}`; }
-
-  // ---------- Fetch with fallbacks ----------
-  async function fetchWithFallback(urls){
-    let lastErr = null;
-    for(const url of urls){
-      try{
-        const res = await fetch(url, {mode:'cors', credentials:'omit', cache:'no-store', referrerPolicy:'no-referrer'});
-        if(!res.ok) throw new Error(`HTTP ${res.status}`);
-        const text = await res.text();
-        if(!text || !text.includes(',')) throw new Error('Empty/invalid CSV');
-        return {text, url};
-      }catch(e){
-        lastErr = e;
-      }
-    }
-    throw lastErr || new Error('All sources failed');
-  }
-
-  // ---------- Compute and Render ----------
-  function applyFilter(){
-    const s = el.startDate.value;
-    const e = el.endDate.value;
-    if(!s || !e) return;
-    let startMs = parseDateInput(s);
-    let endMs = endOfDayMs(parseDateInput(e));
-    // view window
-    state.viewStartMs = startMs;
-    state.viewEndMs = endMs;
-
-    // slice by time (records already sorted)
-    const startIdx = lowerBoundByTime(state.records, startMs);
-    const endIdx = upperBoundByTime(state.records, endMs);
-    state.filteredSlice = [startIdx, endIdx];
-    state.page = 1; // reset page on filter change
-
-    renderAll();
-  }
-
-  function renderAll(){
-    const [i0, i1] = state.filteredSlice;
-    const subset = state.records.slice(i0, i1);
-    // Summary
-    el.sumCount.textContent = fmtNum(subset.length);
-
-    // Dist + counts
-    const week = Array(7).fill(0);
-    const hour = Array(24).fill(0);
-    const mapArtist = new Map();
-    const mapAlbum = new Map(); // key: artist␁album
-    const mapTrack = new Map(); // key: artist␁album␁track
-
-    for(const r of subset){
-      const d = new Date(r.ms);
-      week[d.getDay()]++;
-      hour[d.getHours()]++;
-      // artist
-      mapArtist.set(r.a, (mapArtist.get(r.a) || 0) + 1);
-      // album (artist + album 作为唯一键，显示时分开)
-      const kA = uniqueKeyAlbum(r.a, r.b);
-      mapAlbum.set(kA, (mapAlbum.get(kA) || 0) + 1);
-      // track (artist + album + track)
-      const kT = uniqueKeyTrack(r.a, r.b, r.t);
-      mapTrack.set(kT, (mapTrack.get(kT) || 0) + 1);
-    }
-    el.sumArtists.textContent = fmtNum(mapArtist.size);
-    el.sumAlbums.textContent = fmtNum(mapAlbum.size);
-    el.sumTracks.textContent = fmtNum(mapTrack.size);
-
-    // Range info
-    const rng = `${formatDateInput(new Date(state.viewStartMs))} ~ ${formatDateInput(new Date(state.viewEndMs))}`;
-    const cov = subset.length ? `${formatDateInput(new Date(state.records[0].ms))} ~ ${formatDateInput(new Date(state.records[state.records.length-1].ms))}` : '-';
-    el.rangeInfo.textContent = `数据覆盖：${cov} | 命中 ${fmtNum(subset.length)} 条`;
-
-    // Charts
-    renderBars(el.weekBars, el.weekLabels, week, WEEK_NAMES, 7, true);
-    renderBars(el.hourBars, el.hourLabels, hour, Array.from({length:24}, (_,i)=>String(i)), 24, false);
-
-    // Ranking
-    const rankType = state.rankType;
-    let items = [];
-    if(rankType === 'artist'){
-      for(const [name, count] of mapArtist.entries()){
-        items.push({count, artist:name});
-      }
-      items.sort(byCountDesc);
-      renderRankTable('artist', items);
-    }else if(rankType === 'album'){
-      for(const [key, count] of mapAlbum.entries()){
-        const [artist, album] = key.split('\u0001');
-        items.push({count, album, artist});
-      }
-      items.sort(byCountDesc);
-      renderRankTable('album', items);
-    }else{
-      for(const [key, count] of mapTrack.entries()){
-        const [artist, album, track] = key.split('\u0001');
-        items.push({count, track, artist, album});
-      }
-      items.sort(byCountDesc);
-      renderRankTable('track', items);
-    }
-    const totalPages = Math.max(1, Math.ceil(items.length / state.pageSize));
-    state.page = clamp(state.page, 1, totalPages);
-    el.pageNum.textContent = String(state.page);
-    el.pageTotal.textContent = String(totalPages);
-    el.rankInfo.textContent = `共 ${fmtNum(items.length)} 项 · 每页 ${state.pageSize}`;
-
-    const start = (state.page - 1) * state.pageSize;
-    const end = Math.min(items.length, start + state.pageSize);
-    renderRankBody(rankType, items.slice(start, end), start);
-  }
-
-  function renderBars(container, labelsEl, data, labels, cols, alt){
-    container.innerHTML = '';
-    labelsEl.innerHTML = '';
-    let max = 0;
-    for(const v of data) if(v > max) max = v;
-    max = Math.max(max, 1);
-    data.forEach((v, idx)=>{
-      const div = document.createElement('div');
-      div.className = 'bar' + (alt ? ' alt' : '');
-      const h = Math.round((v / max) * 100);
-      div.style.height = `${h}%`;
-      div.setAttribute('data-label', `${labels[idx]}：${fmtNum(v)}`);
-      container.appendChild(div);
-
-      const lab = document.createElement('div');
-      lab.textContent = labels[idx];
-      labelsEl.style.setProperty('--cols', cols);
-      labelsEl.appendChild(lab);
-    });
-  }
-
-  function renderRankTable(type, items){
-    el.rankTitle.textContent = `排行榜 · ${ type==='artist' ? '艺人' : type==='album' ? '专辑' : '歌曲' }`;
-    // Head
-    let headHTML = '';
-    if(type==='artist'){
-      headHTML = '<th style="width:72px">#</th><th>艺人</th><th style="width:120px">次数</th>';
-    }else if(type==='album'){
-      headHTML = '<th style="width:72px">#</th><th>专辑</th><th>艺人</th><th style="width:120px">次数</th>';
-    }else{
-      headHTML = '<th style="width:72px">#</th><th>歌曲</th><th>艺人</th><th>专辑</th><th style="width:120px">次数</th>';
-    }
-    el.rankHead.innerHTML = `<tr>${headHTML}</tr>`;
-    // Store current items total for pagination info
-  }
-  function renderRankBody(type, pageItems, globalStartIndex){
-    el.rankBody.innerHTML = '';
-    const frag = document.createDocumentFragment();
-    pageItems.forEach((it, i)=>{
-      const tr = document.createElement('tr');
-      const rank = globalStartIndex + i + 1;
-      if(type==='artist'){
-        tr.innerHTML = `<td>${rank}</td><td>${escapeHTML(it.artist)}</td><td>${fmtNum(it.count)}</td>`;
-      }else if(type==='album'){
-        tr.innerHTML = `<td>${rank}</td><td>${escapeHTML(it.album)}</td><td>${escapeHTML(it.artist)}</td><td>${fmtNum(it.count)}</td>`;
-      }else{
-        tr.innerHTML = `<td>${rank}</td><td>${escapeHTML(it.track)}</td><td>${escapeHTML(it.artist)}</td><td>${escapeHTML(it.album)}</td><td>${fmtNum(it.count)}</td>`;
-      }
-      frag.appendChild(tr);
-    });
-    el.rankBody.appendChild(frag);
-  }
-
-  function escapeHTML(s){
-    return String(s).replace(/[&<>"']/g, c => ({
-      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
-    }[c]));
-  }
-
-  function randomPickTracks(){
-    const [i0, i1] = state.filteredSlice;
-    const subset = state.records.slice(i0, i1);
-    const uniq = new Map(); // k -> {artist, album, track}
-    for(const r of subset){
-      const k = uniqueKeyTrack(r.a, r.b, r.t);
-      if(!uniq.has(k)) uniq.set(k, {artist:r.a, album:r.b, track:r.t});
-    }
-    const want = parseInt(el.randCount.value, 10);
-    const pool = Array.from(uniq.values());
-    if(pool.length === 0){
-      el.randomUl.innerHTML = '<li>当前时间范围内没有数据</li>';
-      return;
-    }
-    // shuffle using crypto if available
-    const idxArr = [...pool.keys()];
-    if(window.crypto && crypto.getRandomValues){
-      // Fisher-Yates with crypto
-      for(let i=idxArr.length-1;i>0;i--){
-        const r = new Uint32Array(1); crypto.getRandomValues(r);
-        const j = r[0] % (i+1);
-        [idxArr[i], idxArr[j]] = [idxArr[j], idxArr[i]];
-      }
-    }else{
-      for(let i=idxArr.length-1;i>0;i--){
-        const j = Math.floor(Math.random() * (i+1));
-        [idxArr[i], idxArr[j]] = [idxArr[j], idxArr[i]];
-      }
-    }
-    const sel = idxArr.slice(0, Math.min(want, pool.length)).map(i=>pool[i]);
-    el.randomUl.innerHTML = '';
-    sel.forEach(it=>{
-      const li = document.createElement('li');
-      li.textContent = `${it.track} — ${it.artist} （${it.album}）`;
-      el.randomUl.appendChild(li);
-    });
-  }
-
-  // ---------- Init ----------
-  function initDates(){
-    const today = new Date();
-    const start = new Date(today.getTime() - 5000*24*3600*1000);
-    el.startDate.value = formatDateInput(start);
-    el.endDate.value = formatDateInput(today);
-    // Allow selecting wide range
-    el.startDate.max = formatDateInput(today);
-    el.endDate.max = formatDateInput(today);
-  }
-
-  function wireEvents(){
-    const debouncedApply = debounce(applyFilter, 200);
-    el.startDate.addEventListener('change', ()=>{
-      // keep start <= end
-      if(el.endDate.value && el.startDate.value > el.endDate.value){
-        el.endDate.value = el.startDate.value;
-      }
-      debouncedApply();
-    });
-    el.endDate.addEventListener('change', ()=>{
-      if(el.startDate.value && el.endDate.value < el.startDate.value){
-        el.startDate.value = el.endDate.value;
-      }
-      debouncedApply();
-    });
-    el.rankType.addEventListener('change', ()=>{
-      state.rankType = el.rankType.value;
-      state.page = 1;
-      renderAll();
-    });
-    el.pageSize.addEventListener('change', ()=>{
-      state.pageSize = parseInt(el.pageSize.value,10);
-      state.page = 1;
-      renderAll();
-    });
-    el.prevPage.addEventListener('click', ()=>{
-      state.page = Math.max(1, state.page - 1);
-      renderAll();
-    });
-    el.nextPage.addEventListener('click', ()=>{
-      state.page = state.page + 1;
-      renderAll();
-    });
-    el.randBtn.addEventListener('click', randomPickTracks);
-  }
-
-  function debounce(fn, wait){
-    let t=null; return (...args)=>{ clearTimeout(t); t=setTimeout(()=>fn(...args), wait); };
-  }
-
-  async function loadData(){
-    try{
-      setLoading(true, '正在加载数据…');
-      const {text, url} = await fetchWithFallback(SOURCES);
-      state.sourceUsed = url;
-      el.sourceInfo.textContent = `数据源：${url}`;
-      setLoading(true, '正在解析 CSV…（请稍候）');
-
-      const rows = parseCSV(text);
-      // rows: [artist, album, track, time]
-      const recs = [];
-      for(const r of rows){
-        const artist = r[0];
-        const album  = r[1];
-        const track  = r[2];
-        const timeStr= r[3];
-        const ms = parseLastfmTime(timeStr);
-        if(!artist || !album || !track || Number.isNaN(ms)) continue; // 跳过异常行/表头
-        recs.push({a:artist, b:album, t:track, ms});
-      }
-      recs.sort((x,y)=> x.ms - y.ms);
-      state.records = recs;
-      if(recs.length){
-        state.minMs = recs[0].ms; state.maxMs = recs[recs.length-1].ms;
-      }
-      setLoading(false, `加载完成：${fmtNum(recs.length)} 条记录`);
-      // 初次应用过滤
-      applyFilter();
-    }catch(err){
-      console.error(err);
-      setLoading(false, '加载失败，请刷新重试');
-      el.sourceInfo.textContent = `数据源加载失败：${err?.message || err}`;
-      alert('CSV 加载失败：' + (err?.message || err));
-    }
-  }
-
-  function setLoading(isLoading, text){
-    el.loading.style.display = isLoading ? 'inline-block' : 'none';
-    el.statusText.textContent = text || '';
-  }
-
-  // Boot
-  initDates();
-  wireEvents();
-  loadData();
-
-})();
-</script>
+        
+        // 更新所有可视化组件
+        function updateAllVisualizations() {
+            updateRankings();
+            updateCharts();
+        }
+        
+        // 更新排行榜
+        function updateRankings() {
+            const rankingType = document.getElementById('ranking-type').value;
+            const container = document.getElementById('ranking-container');
+            
+            // 计算不同实体的播放次数
+            let counts = {};
+            filteredRecords.forEach(record => {
+                const key = record[rankingType];
+                counts[key] = (counts[key] || 0) + 1;
+            });
+            
+            // 转换为数组并排序
+            const sorted = Object.entries(counts)
+                .map(([name, count]) => ({ name, count }))
+                .sort((a, b) => b.count - a.count);
+            
+            // 分页
+            const totalPages = Math.ceil(sorted.length / itemsPerPage);
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const paginatedItems = sorted.slice(startIndex, startIndex + itemsPerPage);
+            
+            // 生成表格HTML
+            let html = `
+                <table class="ranking-table">
+                    <thead>
+                        <tr>
+                            <th>排名</th>
+                            <th>${rankingType === 'song' ? '歌曲' : rankingType === 'artist' ? '艺人' : '专辑'}</th>
+                            <th>播放次数</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            paginatedItems.forEach((item, index) => {
+                const rank = startIndex + index + 1;
+                html += `
+                    <tr>
+                        <td>${rank}</td>
+                        <td>${item.name}</td>
+                        <td>${item.count}</td>
+                    </tr>
+                `;
+            });
+            
+            html += `
+                    </tbody>
+                </table>
+                <div class="pagination">
+                    第 ${currentPage} 页，共 ${totalPages} 页
+                </div>
+            `;
+            
+            container.innerHTML = html;
+        }
+        
+        // 更新图表
+        function updateCharts() {
+            updateDayOfWeekChart();
+            updateHourOfDayChart();
+        }
+        
+        // 更新星期分布图表
+        function updateDayOfWeekChart() {
+            const ctx = document.getElementById('day-of-week-chart').getContext('2d');
+            
+            // 计算每天的数量
+            const dayCounts = Array(7).fill(0);
+            filteredRecords.forEach(record => {
+                dayCounts[record.dayOfWeek]++;
+            });
+            
+            // 准备图表数据
+            const data = dayCounts.map((count, index) => ({
+                day: dayNames[index],
+                count: count
+            }));
+            
+            // 销毁旧图表（如果存在）
+            if (dayOfWeekChart) {
+                dayOfWeekChart.destroy();
+            }
+            
+            // 创建新图表
+            dayOfWeekChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.map(d => d.day),
+                    datasets: [{
+                        label: '播放次数',
+                        data: data.map(d => d.count),
+                        backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `播放次数: ${context.raw}`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // 更新24小时分布图表
+        function updateHourOfDayChart() {
+            const ctx = document.getElementById('hour-of-day-chart').getContext('2d');
+            
+            // 计算每小时的数量
+            const hourCounts = Array(24).fill(0);
+            filteredRecords.forEach(record => {
+                hourCounts[record.hourOfDay]++;
+            });
+            
+            // 准备图表数据
+            const labels = Array.from({length: 24}, (_, i) => `${i}:00`);
+            const data = hourCounts;
+            
+            // 销毁旧图表（如果存在）
+            if (hourOfDayChart) {
+                hourOfDayChart.destroy();
+            }
+            
+            // 创建新图表
+            hourOfDayChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: '播放次数',
+                        data: data,
+                        backgroundColor: 'rgba(255, 99, 132, 0.5)',
+                        borderColor: 'rgba(255, 99, 132, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `播放次数: ${context.raw}`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // 随机选择歌曲
+        function selectRandomSongs() {
+            const count = parseInt(document.getElementById('random-count').value);
+            const resultContainer = document.getElementById('random-result');
+            
+            if (filteredRecords.length === 0) {
+                resultContainer.innerHTML = '没有可用的记录。';
+                return;
+            }
+            
+            // 随机选择不重复的歌曲
+            const shuffled = [...filteredRecords].sort(() => 0.5 - Math.random());
+            const selected = shuffled.slice(0, Math.min(count, shuffled.length));
+            
+            // 显示结果
+            let html = '<ul>';
+            selected.forEach(record => {
+                html += `<li>${record.artist} - ${record.song} (${record.album}) - ${record.date}</li>`;
+            });
+            html += '</ul>';
+            
+            resultContainer.innerHTML = html;
+        }
+        
+        // 初始化事件监听器
+        function initEventListeners() {
+            document.getElementById('apply-filter').addEventListener('click', function() {
+                filterRecords();
+                updateAllVisualizations();
+            });
+            
+            document.getElementById('random-select').addEventListener('click', selectRandomSongs);
+            
+            document.getElementById('ranking-type').addEventListener('change', function() {
+                currentPage = 1;
+                updateRankings();
+            });
+            
+            document.getElementById('prev-page').addEventListener('click', function() {
+                if (currentPage > 1) {
+                    currentPage--;
+                    updateRankings();
+                }
+            });
+            
+            document.getElementById('next-page').addEventListener('click', function() {
+                // 简单估算最大页数
+                const rankingType = document.getElementById('ranking-type').value;
+                let counts = {};
+                filteredRecords.forEach(record => {
+                    const key = record[rankingType];
+                    counts[key] = (counts[key] || 0) + 1;
+                });
+                
+                const totalPages = Math.ceil(Object.keys(counts).length / itemsPerPage);
+                if (currentPage < totalPages) {
+                    currentPage++;
+                    updateRankings();
+                }
+            });
+        }
+        
+        // 初始化应用
+        function initApp() {
+            setDefaultDateRange();
+            initEventListeners();
+            fetchData();
+        }
+        
+        // 当页面加载完成后初始化应用
+        document.addEventListener('DOMContentLoaded', initApp);
+    </script>
 </body>
 </html>
